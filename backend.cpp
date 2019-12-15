@@ -1,4 +1,5 @@
 #include <mem.h>
+#include <vector>
 #include "My_Headers/txt_files.h"
 #include "Tree_t/Tree.cpp"
 #include "Node.h"
@@ -14,12 +15,15 @@ int RAM_POINTER = 0;
 int GLOBAL = -1;
 const char BASE_REG[] = "bx";
 const char ADRESS_REG[] = "ax";
+int CONDITION_COUNTER = 0;
+int CYCLE_COUNTER = 0;
+int STACK_FRAME = 0;
 
 //Переменные
 struct Variable {
     char* ID = nullptr;   //имя
     int adress = NOT_SET; //адрес в RAM
-    int level = NOT_SET;       //область видимости переменной
+    int level = NOT_SET;  //область видимости переменной
 };
 Variable VARIABLES[MAX_VARIABLES_COUNT];
 int VARIABLE_COUNT = 0;
@@ -237,9 +241,6 @@ void translate(FILE *assembler, Tree<Node>* node) {
 
 #define it_is(CHILD, TYPE, CODE) node->getChild(CHILD)->getValue().type == TYPE && node->getChild(CHILD)->getValue().code == CODE
 
-int CONDITION_COUNTER = 0;
-int CYCLE_COUNTER = 0;
-
 void specialSymbolHandler(FILE *assembler, Tree<Node> *node) {
     switch (node->getValue().code) {
         case RET:
@@ -319,13 +320,9 @@ void functionHandler(FILE *assembler, Tree<Node> *node) {
     && node->getParent()->getValue().code == DOT_COMA) {
         fprintf(assembler, "%s:\n"
                            "\tpop %s; Save call adress to register\n"
-                           ";<--RAM adress setup-->\n"
-                           "\tpush %d\n"
-                           "\tpush %s\n"
-                           "\tadd\n"
-                           "\tpop %s\n"
                            ";<--Parameters initialization-->\n",
-                           FUNCTIONS[node->getValue().code].ID, ADRESS_REG, FUNCTIONS[node->getValue().code].varc, BASE_REG, BASE_REG);
+                           FUNCTIONS[node->getValue().code].ID, ADRESS_REG);
+        STACK_FRAME = FUNCTIONS[node->getValue().code].varc;
         while (!node_copy->childIsEmpty(LEFT_CHILD)) {
             assert(it_is(LEFT_CHILD, Node::SPECIAL_SYMBOLS, COMA_PARAMETER));
             node_copy = node_copy->getChild(LEFT_CHILD);
@@ -336,7 +333,6 @@ void functionHandler(FILE *assembler, Tree<Node> *node) {
                            ";<--Body-->\n",
                            ADRESS_REG);
         translate(assembler, node->getChild(RIGHT_CHILD));
-        //if (strcmp(FUNCTIONS[node->getValue().code].ID, "$main") == 0)
         fprintf(assembler, "ret\n");
     } else {
         while (!node_copy->childIsEmpty(LEFT_CHILD)) {
@@ -344,13 +340,24 @@ void functionHandler(FILE *assembler, Tree<Node> *node) {
             node_copy = node_copy->getChild(LEFT_CHILD);
             translate(assembler, node_copy->getChild(RIGHT_CHILD));
         }
-        fprintf(assembler, "\tcall %s\n"
-                           ";<--RAM adress free-->\n"
+        fprintf(assembler, ";<--RAM memory allocate-->\n"
+                           "\tpush %s\n"
+                           "\tpush %d\n"
+                           "\tadd\n"
+                           "\tpop %s\n"
+                           "\tcall %s\n"
+                           ";<--RAM memory deallocate-->\n"
                            "\tpush %s\n"
                            "\tpush %d\n"
                            "\tsub\n"
                            "\tpop %s\n",
-                           FUNCTIONS[node->getValue().code].ID, BASE_REG, FUNCTIONS[node->getValue().code].varc, BASE_REG);
+                           BASE_REG,
+                           STACK_FRAME,
+                           BASE_REG,
+                           FUNCTIONS[node->getValue().code].ID,
+                           BASE_REG,
+                           STACK_FRAME,
+                           BASE_REG);
     }
 }
 
