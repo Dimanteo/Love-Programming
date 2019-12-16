@@ -1,17 +1,5 @@
 #ifndef PROGRAMMING_LANGUAGE_COMMONS_H
 #define PROGRAMMING_LANGUAGE_COMMONS_H
-/*const char FUNC_DEF[] = "чтоб не нести вдоль ночных дорог";
-const char MAIN[] = "я так привыкла жить одним тобой";
-const char BEGIN[] = "и пусть";
-const char END[] = "не потеряй его и не сломай";
-const char GET[] = "мой нежный мальчик";
-const char PUT[] = "сквозь сезы прошептала";
-const char WHILE[] = "и повторять лишь одно";
-const char IF[] = "знаешь ли ты";
-const char ASSIGNMENT[] = "его теперь";
-const char RETURN_PREFIX[] = "не потеряй";
-const char RETURN_POSTFIX[] = "и не сломай";
-const char DIFFER[] = "производную брала не жалея";*/
 
 enum STD_CODE {
     DOT_COMA,
@@ -47,7 +35,7 @@ STD_object STD_ObjList[] {
         {DOT_COMA,       ";"},
         {COMA_PARAMETER, ","},
         {ASSIGN,         "="},
-        {OP,             "Op"},
+        {OP,             "op"},
         {RET,            "ret"},
         {IF,             "if"},
         {IF_ELSE,        "if-else"},
