@@ -4,34 +4,35 @@
 #include "Tree_t/Tree.cpp"
 #include "Node.h"
 #include "Commons.h"
+#include "Derivative.h"
 
 #define VERIFY_CONTEXT __FILE__, __PRETTY_FUNCTION__, __LINE__
 
 const size_t MAX_STRING_SIZE = 40;
 const size_t MAX_VARIABLES_COUNT = 2000;
 const size_t MAX_FUNCTION_COUNT = 2000;
-const int NOT_SET = -2;
-int RAM_POINTER = 0;
-int GLOBAL = -1;
-const char BASE_REG[] = "bx";
-const char ADRESS_REG[] = "ax";
-int CONDITION_COUNTER = 0;
-int CYCLE_COUNTER = 0;
-int STACK_FRAME = 0;
+const int    NOT_SET = -2;
+int          RAM_POINTER = 0;
+int          GLOBAL = -1;
+const char   BASE_REG[] = "bx";
+const char   ADRESS_REG[] = "ax";
+int          CONDITION_COUNTER = 0;
+int          CYCLE_COUNTER = 0;
+int          STACK_FRAME = 0;
 
 //Переменные
 struct Variable {
-    char* ID = nullptr;   //имя
-    int adress = NOT_SET; //адрес в RAM
-    int level = NOT_SET;  //область видимости переменной
+    char* ID     = nullptr;  //имя
+    int   adress = NOT_SET;  //адрес в RAM
+    int   level  = NOT_SET;  //область видимости переменной
 };
 Variable VARIABLES[MAX_VARIABLES_COUNT];
 int VARIABLE_COUNT = 0;
 
 //Функции
 struct Function {
-    char* ID = nullptr;
-    int varc = 0;
+    char* ID   = nullptr;  //имя
+    int   varc = 0;        //количество локальных переменных
 };
 Function FUNCTIONS[MAX_FUNCTION_COUNT];
 int FUNCTION_COUNT = 0;
@@ -77,24 +78,19 @@ void specialSymbolHandler(FILE* assembler, Tree<Node>* node);
 
 void makeAssembler(const char filename[], Tree<Node>* tree);
 
-int main() {
-    size_t size = 0;
-    char* data = read_file_to_buffer_alloc("../Maksim.txt", "rb", &size);
-    char* data_copy = data;
-    Tree<Node>* tree = new Tree<Node>(Node());
-    parseToAST(&data_copy, tree);
-    assert(tree);
-    free(data);
+void makeDump(const char textDump[], const char graphDump[], Tree<Node>* tree);
 
-    FILE* dump = fopen("Tree.log", "wb");
-    Tree<Node>** sequence = tree->allocTree();
-    tree->inorder(sequence);
-    tree->treeDump(dump, OK_STATE, "main", VERIFY_CONTEXT, sequence);
-    tree->graphDump("AST.png", sequence);
-    free(sequence);
-    fclose(dump);
+Tree<Node> * makeAST(const char input[]);
+
+int main() {
+
+    Tree<Node>* tree = makeAST("Maksim.love");
+
+    makeDump("Tree.log", "AST_backend_IN.png", tree);
 
     makeAssembler("E:/C_Progs/Processor Laba/asm_stdin.txt", tree);
+
+    makeDump("Tree.log", "AST_backend_OUT", tree);
 
     for (int i = 0; i < FUNCTION_COUNT; ++i) {
         free(FUNCTIONS[i].ID);
@@ -163,10 +159,15 @@ Node makeNode(char *value, Tree<Node> *node) {
         }
         int current_level = function->getValue().code;
         for (int i = 0; i < VARIABLE_COUNT; ++i) {
+
             if (VARIABLES[i].level == current_level && strcmp(VARIABLES[i].ID, value) == 0) {
+
                 return Node(Node::VARIABLE_TYPE, i);
+
             } else if (VARIABLES[i].level == GLOBAL && strcmp(VARIABLES[i].ID, value) == 0) {
+
                 return Node(Node::VARIABLE_TYPE, i);
+
             }
         }
         VARIABLES[VARIABLE_COUNT] = {strdup(value), FUNCTIONS[current_level].varc, current_level};
@@ -277,15 +278,24 @@ void specialSymbolHandler(FILE *assembler, Tree<Node> *node) {
             break;
         case IF: {
             int if_number = CONDITION_COUNTER++;
+
             translate(assembler, node->getChild(LEFT_CHILD));
+
             fprintf(assembler, " if_%d\n", if_number);
+
             if (it_is(RIGHT_CHILD, Node::SPECIAL_SYMBOLS, IF_ELSE)) {
+
                 if (!node->getChild(RIGHT_CHILD)->childIsEmpty(RIGHT_CHILD))
                     translate(assembler, node->getChild(RIGHT_CHILD)->getChild(RIGHT_CHILD));
+
                 fprintf(assembler, "\tjmp if_%d_end\nif_%d:\n", if_number, if_number);
+
                 translate(assembler, node->getChild(RIGHT_CHILD)->getChild(LEFT_CHILD));
+
             } else {
+
                 fprintf(assembler, "\tjmp if_%d_end\nif_%d:\n", if_number, if_number);
+
                 translate(assembler, node->getChild(RIGHT_CHILD));
             }
             fprintf(assembler, "if_%d_end:\n", if_number);
@@ -299,6 +309,7 @@ void specialSymbolHandler(FILE *assembler, Tree<Node> *node) {
             fprintf(assembler, " cycle_%d\n", cycle_number);
             break;
         }
+
         postorder(MORE, "\tjb")
         postorder(LESS, "\tja")
         postorder(MORE_EQUAL, "\tjbe")
@@ -310,36 +321,69 @@ void specialSymbolHandler(FILE *assembler, Tree<Node> *node) {
         postorder(DIVIDE, "\tdiv\n")
         postorder(MULTIPLY, "\tmul\n")
         postorder(POWER, "\tpow\n")
-        //TODO дифференциатор
+
+        case DERIV: {
+            Differentiator dif(node->getChild(LEFT_CHILD)->getValue().code);
+
+            Tree<Node>* copy = node->getChild(RIGHT_CHILD)->copySubtree();
+
+            Tree<Node>* result = dif.diff(copy);
+
+            delete(copy);
+
+            dif.optimization(result);
+
+            node->removeSubTree(RIGHT_CHILD);
+            node->connectSubtree(RIGHT_CHILD, result);
+
+            translate(assembler, node->getChild(RIGHT_CHILD));
+            fprintf(assembler, "\tout\n");
+
+            break;
+        }
     }
 }
 
 void functionHandler(FILE *assembler, Tree<Node> *node) {
     Tree<Node>* node_copy = node;
+
     if (node->getParent()->getValue().type == Node::SPECIAL_SYMBOLS
     && node->getParent()->getValue().code == DOT_COMA) {
+
         fprintf(assembler, "%s:\n"
                            "\tpop %s; Save call adress to register\n"
                            ";<--Parameters initialization-->\n",
                            FUNCTIONS[node->getValue().code].ID, ADRESS_REG);
+
         STACK_FRAME = FUNCTIONS[node->getValue().code].varc;
+
         while (!node_copy->childIsEmpty(LEFT_CHILD)) {
             assert(it_is(LEFT_CHILD, Node::SPECIAL_SYMBOLS, COMA_PARAMETER));
+
             node_copy = node_copy->getChild(LEFT_CHILD);
+
             assert(node_copy->getChild(RIGHT_CHILD)->getValue().type == Node::VARIABLE_TYPE);
+
             fprintf(assembler, "\tpop [%s + %d]\n", BASE_REG, VARIABLES[node_copy->getChild(RIGHT_CHILD)->getValue().code].adress);
         }
+
         fprintf(assembler, "\tpush %s; Push call adress to stack\n"
                            ";<--Body-->\n",
                            ADRESS_REG);
+
         translate(assembler, node->getChild(RIGHT_CHILD));
+
         fprintf(assembler, "ret\n");
     } else {
+
         while (!node_copy->childIsEmpty(LEFT_CHILD)) {
             assert(it_is(LEFT_CHILD, Node::SPECIAL_SYMBOLS, COMA_PARAMETER));
+
             node_copy = node_copy->getChild(LEFT_CHILD);
+
             translate(assembler, node_copy->getChild(RIGHT_CHILD));
         }
+
         fprintf(assembler, ";<--RAM memory allocate-->\n"
                            "\tpush %s\n"
                            "\tpush %d\n"
@@ -363,10 +407,14 @@ void functionHandler(FILE *assembler, Tree<Node> *node) {
 
 void variableHandler(FILE *assembler, Tree<Node> *node) {
     Variable* var = &VARIABLES[node->getValue().code];
+
     if (node->getParent()->getValue().type == Node::SPECIAL_SYMBOLS
     && (node->getParent()->getValue().code == ASSIGN || node->getParent()->getValue().code == GET)) {
+
         if (var->level == GLOBAL) {
+
             fprintf(assembler, "\tpop [%d]\n", var->adress);
+
         } else {
             fprintf(assembler, "\tpop [%s + %d]\n", BASE_REG, var->adress);
         }
@@ -377,6 +425,38 @@ void variableHandler(FILE *assembler, Tree<Node> *node) {
             fprintf(assembler, "\tpush [%s + %d]\n", BASE_REG, var->adress);
         }
     }
+}
+
+void makeDump(const char *textDump, const char *graphDump, Tree<Node> *tree) {
+    FILE* dump = fopen(textDump, "wb");
+
+    Tree<Node>** sequence = tree->allocTree();
+
+    tree->inorder(sequence);
+
+    tree->treeDump(dump, OK_STATE, "main", VERIFY_CONTEXT, sequence);
+
+    tree->graphDump(graphDump, sequence);
+
+    free(sequence);
+    fclose(dump);
+}
+
+Tree<Node> * makeAST(const char *input) {
+    size_t size = 0;
+
+    char* data = read_file_to_buffer_alloc(input, "rb", &size);
+
+    char* data_copy = data;
+
+    Tree<Node>* tree = new Tree<Node>(Node());
+
+    parseToAST(&data_copy, tree);
+
+    assert(tree);
+    free(data);
+
+    return tree;
 }
 
 #undef postorder
