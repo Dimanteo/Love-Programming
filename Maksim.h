@@ -13,7 +13,7 @@ const char LELSE[] = "пульс его теперь";
 const char LASSIGNMENT[] = "теперь";
 const char LRETURN[] = "не потеряй";
 const char LDIFFER[] = "не жалея";
-const char LCALL[] = "мне стало так легко";
+const char LDIFFERVAL[] = "шла по";
 
 #define L(tok) (char*)L##tok
 
@@ -30,7 +30,7 @@ char* Language_CMD[] {
     L(ASSIGNMENT),
     L(RETURN),
     L(DIFFER),
-    L(CALL)
+    L(DIFFERVAL)
 };
 
 int LCMD_COUNT = sizeof(Language_CMD) / sizeof(Language_CMD[0]);

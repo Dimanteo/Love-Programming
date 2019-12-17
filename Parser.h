@@ -22,13 +22,17 @@ int ID_COUNT = 0;
 char* ID_VECTOR[MAX_ID_COUNT];
 
 struct LexicalAnalizator {
+
     static const size_t MAX_NAME_LENGTH = 500;
+
     char* str;
+
     int LINE_CNT = 1;
 
     struct Token {
         enum TYPE {NUMBER, ID, CMD, SYMBOL};
         TYPE type;
+
         union {
             int code;
             double num;
@@ -37,6 +41,7 @@ struct LexicalAnalizator {
         Token (TYPE _type, int _code) : type(_type), code(_code){}
         Token (double value) : type(NUMBER), num(value){}
     };
+
     Token* tok_str;
     int tok_size = 0;
 
@@ -44,11 +49,9 @@ struct LexicalAnalizator {
         tok_str = (Token*)calloc(strlen(str), sizeof(tok_str[0]));
         tok_size = 0;
     }
+
     ~LexicalAnalizator() {
         free(tok_str);
-        for (int i = 0; i < ID_COUNT; ++i) {
-            free(ID_VECTOR[i]);
-        }
     }
 
     void tokenize();
@@ -93,6 +96,10 @@ struct LexicalAnalizator {
 
     Tree<Node>* getPut();
 
+    Tree<Node>* getRet();
+
+    Tree<Node>* getDeriv();
+
     Tree<Node>* getEquation();
 
     Tree<Node>* getCondition();
@@ -115,7 +122,6 @@ struct LexicalAnalizator {
 };
 
 void LexicalAnalizator::tokenize() {
-
     while (*str != '\0') {
 
         if (*str == ' ' || *str == '\t') {
@@ -205,17 +211,25 @@ Tree<Node> *LexicalAnalizator::getG() {
 Tree<Node>* LexicalAnalizator::getExp() {
     Tree<Node>* start = new Tree<Node>(Node(Node::SPECIAL_SYMBOLS, DOT_COMA));
     Tree<Node>* global = start;
+    while (this_is(SYMBOL, '\n'))
+        tok_ptr++;
     while (this_is_cmd(LFUNC_DEF)) {
         global->growChild(RIGHT_CHILD, Node(Node::SPECIAL_SYMBOLS, DOT_COMA));
         global->getChild(RIGHT_CHILD)->connectSubtree(LEFT_CHILD, getDef());
         global = global->getChild(RIGHT_CHILD);
+        while (this_is(SYMBOL, '\n'))
+            tok_ptr++;
     }
     check_assert(this_is_cmd(LMAIN))
     start->connectSubtree(LEFT_CHILD, getMain());
+    while (this_is(SYMBOL, '\n'))
+        tok_ptr++;
     while (this_is_cmd(LFUNC_DEF)) {
         global->growChild(RIGHT_CHILD, Node(Node::SPECIAL_SYMBOLS, DOT_COMA));
         global->getChild(RIGHT_CHILD)->connectSubtree(LEFT_CHILD, getDef());
         global = global->getChild(RIGHT_CHILD);
+        while (this_is(SYMBOL, '\n'))
+            tok_ptr++;
     }
     return start;
 }
@@ -230,7 +244,7 @@ Tree<Node> *LexicalAnalizator::getDef() {
         linebr
         tok_ptr++;
         def->connectSubtree(RIGHT_CHILD, getBody());
-        linebr;
+        linebr
         tok_ptr++;
         return def;
     } else {
@@ -310,6 +324,10 @@ Tree<Node> *LexicalAnalizator::getOp() {
         return getGet();
     } else if (this_is_cmd(LPUT)) {
         return getPut();
+    } else if (this_is_cmd(LRETURN)) {
+        return getRet();
+    } else if (this_is_cmd(LDIFFER)) {
+        return getDeriv();
     } else if (tok_str[tok_ptr].type == Token::ID) {
         return getAssign();
     }
@@ -494,7 +512,7 @@ Tree<Node> *LexicalAnalizator::getPow() {
     if (this_is(SYMBOL, '^')) {
         tok_ptr++;
         Tree<Node>* val1 = getP();
-        Tree<Node>* ret_val = new Tree<Node>(Node(Node::SPECIAL_SYMBOLS, DIVIDE));
+        Tree<Node>* ret_val = new Tree<Node>(Node(Node::SPECIAL_SYMBOLS, POWER));
         ret_val->connectSubtree(LEFT_CHILD, val);
         ret_val->connectSubtree(RIGHT_CHILD, val1);
         val = ret_val;
@@ -578,6 +596,31 @@ void LexicalAnalizator::printToken(FILE * file, int index) {
             break;
     }
     fprintf(file, "\n");
+}
+
+Tree<Node> *LexicalAnalizator::getRet() {
+    check_assert(this_is_cmd(LRETURN))
+    tok_ptr++;
+    Tree<Node>* ret = new Tree<Node>(Node(Node::SPECIAL_SYMBOLS, RET));
+    if (this_is(SYMBOL, '\n')) {
+        return  ret;
+    } else {
+        ret->connectSubtree(LEFT_CHILD, getEquation());
+        return ret;
+    }
+}
+
+Tree<Node> *LexicalAnalizator::getDeriv() {
+    check_assert(this_is_cmd(LDIFFER))
+    tok_ptr++;
+    Tree<Node>* deriv = new Tree<Node>(Node(Node::SPECIAL_SYMBOLS, DERIV));
+    check_assert(tok_str[tok_ptr].type == Token::ID)
+    deriv->growChild(LEFT_CHILD, Node(Node::VARIABLE_TYPE, tok_str[tok_ptr].code));
+    tok_ptr++;
+    check_assert(this_is_cmd(LDIFFERVAL))
+    tok_ptr++;
+    deriv->connectSubtree(RIGHT_CHILD, getEquation());
+    return deriv;
 }
 
 
