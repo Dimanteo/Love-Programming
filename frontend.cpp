@@ -4,7 +4,7 @@
 #include "Tree_t/Tree.cpp"
 #include "Parser.h"
 
-/////////Специализация шаблона/////////////
+//////////////TEMPLATE SPECIALIZATION/////////////////
 template <>
 void Tree<Node>::valuePrint(FILE *file) {
     switch (value.type) {
@@ -31,7 +31,7 @@ void Tree<Node>::valueDestruct() {
     value.~Node();
 }
 
-/////////Методы frontend/////////////
+///////////////////FRONTEND////////////////////////
 
 Tree<Node>* parseLangToAST(const char *inputFile);
 
@@ -41,6 +41,8 @@ void printASTnode(FILE* file, Tree<Node>* node);
 
 void makeTransDump(const char textDump[], const char pngDump[], Tree<Node>* AST);
 
+
+
 int main() {
     Tree<Node>* AST = parseLangToAST("../Maksim.txt");
 
@@ -48,6 +50,8 @@ int main() {
 
     return 0;
 }
+
+
 
 void printASTnode(FILE* file, Tree<Node>* node) {
     switch (node->getValue().type) {
@@ -107,7 +111,7 @@ Tree<Node> *parseLangToAST(const char *inputFile) {
 
     Tree<Node>* AST = analizator.getG();
 
-    makeTransDump("Tree.log", "FrontAST.png", AST);
+    makeTransDump("Tree.log", "AST_frontend.png", AST);
 
     return AST;
 }
