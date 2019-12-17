@@ -10,11 +10,12 @@
 
 #define this_is_cmd(VALUE) (tok_str[tok_ptr].type == Token::CMD && strcmp(Language_CMD[tok_str[tok_ptr].code], VALUE) == 0)
 #define this_is(TYPE, CODE) (tok_str[tok_ptr].type == Token::TYPE && tok_str[tok_ptr].code == CODE)
-#define syntax_assert fprintf(stderr, "Syntax error\n%d %d\n", tok_str[tok_ptr].type, tok_str[tok_ptr].code);  assert(0);
+#define syntax_assert error_msg(__LINE__);
 #define check_assert(cond) \
 if (!(cond)) {\
     syntax_assert\
 }
+#define linebr check_assert(this_is(SYMBOL, '\n')); LINE_CNT++;
 
 const size_t MAX_ID_COUNT = 1000;
 int ID_COUNT = 0;
@@ -23,6 +24,7 @@ char* ID_VECTOR[MAX_ID_COUNT];
 struct LexicalAnalizator {
     static const size_t MAX_NAME_LENGTH = 500;
     char* str;
+    int LINE_CNT = 1;
 
     struct Token {
         enum TYPE {NUMBER, ID, CMD, SYMBOL};
@@ -57,7 +59,11 @@ struct LexicalAnalizator {
 
     bool getSTD();
 
+    void printToken(FILE* file, int index);
+
     void dump();
+
+    void error_msg(int line);
 
     //<---------Recursive descent--------->
 
@@ -162,7 +168,7 @@ void LexicalAnalizator::getStr() {
         return;
     char buffer[MAX_NAME_LENGTH] = "";
     int offset = 0;
-    sscanf(str, "%s%n", buffer, &offset);
+    sscanf(str, "%[^(,)\n+-=*/^><! ]%n", buffer, &offset);
     str += offset;
     ID_VECTOR[ID_COUNT] = strdup(buffer);
     tok_str[tok_size++] = Token(Token::ID, ID_COUNT++);
@@ -184,22 +190,7 @@ void LexicalAnalizator::dump() {
     FILE* file = fopen("Parser.log", "wb");
     fprintf(file, "Dump begin\n");
     for (int i = 0; i < tok_size; ++i) {
-        fprintf(file, "[%d] TYPE = ", i);
-        switch (tok_str[i].type) {
-            case Token::NUMBER:
-                fprintf(file, "number; value = %lg", tok_str[i].num);
-                break;
-            case Token::ID:
-                fprintf(file, "id; value = %s[%d]", ID_VECTOR[tok_str[i].code], tok_str[i].code);
-                break;
-            case Token::SYMBOL:
-                fprintf(file, "symbol; value = %c", tok_str[i].code);
-                break;
-            case Token::CMD:
-                fprintf(file, "command; %s", Language_CMD[tok_str[i].code]);
-                break;
-        }
-        fprintf(file, "\n");
+        printToken(file, i);
     }
     fprintf(file, "Dump end\n");
     fclose(file);
@@ -236,7 +227,11 @@ Tree<Node> *LexicalAnalizator::getDef() {
         Tree<Node>* def = new Tree<Node>(Node(Node::OPERATION_TYPE, tok_str[tok_ptr].code));
         tok_ptr++;
         def->connectSubtree(LEFT_CHILD, getVarEnum());
+        linebr
+        tok_ptr++;
         def->connectSubtree(RIGHT_CHILD, getBody());
+        linebr;
+        tok_ptr++;
         return def;
     } else {
         syntax_assert
@@ -248,7 +243,7 @@ Tree<Node> *LexicalAnalizator::getMain() {
     tok_ptr++;
     ID_VECTOR[ID_COUNT] = strdup("main");
     Tree<Node>* def = new Tree<Node>(Node(Node::OPERATION_TYPE, ID_COUNT++));
-    check_assert(this_is(SYMBOL, '\n'))
+    linebr
     tok_ptr++;
     def->connectSubtree(RIGHT_CHILD, getBody());
     return def;
@@ -257,40 +252,53 @@ Tree<Node> *LexicalAnalizator::getMain() {
 Tree<Node> *LexicalAnalizator::getVarEnum() {
     check_assert(this_is(SYMBOL, '('))
     tok_ptr++;
-    check_assert(tok_str[tok_ptr].type == Token::ID)
-    Tree<Node>* arg = new Tree<Node>(Node(Node::SPECIAL_SYMBOLS, COMA_PARAMETER));
-    arg->growChild(RIGHT_CHILD, Node(Node::VARIABLE_TYPE, tok_str[tok_ptr].code));
-    tok_ptr++;
-    Tree<Node>* nextArg = arg;
-    while (this_is(SYMBOL, ',')) {
+    Tree<Node> *arg = nullptr;
+    if (tok_str[tok_ptr].type == Token::ID) {
+        arg = new Tree<Node>(Node(Node::SPECIAL_SYMBOLS, COMA_PARAMETER));
+        arg->growChild(RIGHT_CHILD, Node(Node::VARIABLE_TYPE, tok_str[tok_ptr].code));
         tok_ptr++;
-        check_assert(tok_str[tok_ptr].type == Token::ID)
-        nextArg = nextArg->growChild(LEFT_CHILD, Node(Node::SPECIAL_SYMBOLS, COMA_PARAMETER));
-        nextArg->growChild(RIGHT_CHILD, Node(Node::VARIABLE_TYPE, tok_str[tok_ptr].code));
-        tok_ptr++;
+        Tree<Node> *nextArg = arg;
+        while (this_is(SYMBOL, ',')) {
+            tok_ptr++;
+            check_assert(tok_str[tok_ptr].type == Token::ID)
+            nextArg = nextArg->growChild(LEFT_CHILD, Node(Node::SPECIAL_SYMBOLS, COMA_PARAMETER));
+            nextArg->growChild(RIGHT_CHILD, Node(Node::VARIABLE_TYPE, tok_str[tok_ptr].code));
+            tok_ptr++;
+        }
     }
     check_assert(this_is(SYMBOL, ')'))
+    tok_ptr++;
     return arg;
 }
 
 Tree<Node> *LexicalAnalizator::getBody() {
     check_assert(this_is_cmd(LBEGIN))
     tok_ptr++;
-    check_assert(this_is(SYMBOL, '\n'))
+    linebr
     tok_ptr++;
-    Tree<Node> *Op = nullptr;
+    Tree<Node> *head = nullptr;
+    Tree<Node> *Oper = nullptr;
     while (!this_is_cmd(LEND)) {
-        while (this_is(SYMBOL, '\n'))
+        while (this_is(SYMBOL, '\n')) {
             tok_ptr++;
+            LINE_CNT++;
+        }
         if (this_is_cmd(LEND))
-            return nullptr;
-        Op = getOp();
-        check_assert(this_is(SYMBOL, '\n'))
+            break;
+        if (head == nullptr) {
+            head = new Tree<Node>(Node(Node::SPECIAL_SYMBOLS, OP));
+            head->connectSubtree(LEFT_CHILD, getOp());
+            Oper = head;
+        } else {
+            Oper = Oper->growChild(RIGHT_CHILD, Node(Node::SPECIAL_SYMBOLS, OP));
+            Oper->connectSubtree(LEFT_CHILD, getOp());
+        }
+        linebr
         tok_ptr++;
     }
     check_assert(this_is_cmd(LEND))
     tok_ptr++;
-    return Op;
+    return head;
 }
 
 Tree<Node> *LexicalAnalizator::getOp() {
@@ -302,7 +310,7 @@ Tree<Node> *LexicalAnalizator::getOp() {
         return getGet();
     } else if (this_is_cmd(LPUT)) {
         return getPut();
-    } else if (tok_str[tok_ptr].code == Token::ID) {
+    } else if (tok_str[tok_ptr].type == Token::ID) {
         return getAssign();
     }
     syntax_assert
@@ -339,7 +347,7 @@ Tree<Node> *LexicalAnalizator::getPut(){
     if (tok_str[tok_ptr].type != Token::ID) {
         syntax_assert
     }
-    put->growChild(LEFT_CHILD, Node(Node::VARIABLE_TYPE, tok_str[tok_ptr].code));
+    put->growChild(LEFT_CHILD, Node(Node::VARIABLE_TYPE, tok_str[tok_ptr++].code));
     return put;
 }
 
@@ -349,8 +357,14 @@ Tree<Node> *LexicalAnalizator::getIf() {
     Tree<Node>* branch = new Tree<Node> (Node(Node::SPECIAL_SYMBOLS, IF));
     branch->connectSubtree(LEFT_CHILD, getCondition());
     branch->growChild(RIGHT_CHILD, Node(Node::SPECIAL_SYMBOLS, IF_ELSE));
+    linebr
+    tok_ptr++;
     branch->getChild(RIGHT_CHILD)->connectSubtree(LEFT_CHILD, getBody());
+    linebr
+    tok_ptr++;
     if (this_is_cmd(LELSE)) {
+        tok_ptr++;
+        linebr
         tok_ptr++;
         branch->getChild(RIGHT_CHILD)->connectSubtree(RIGHT_CHILD, getBody());
     }
@@ -408,6 +422,8 @@ Tree<Node> *LexicalAnalizator::getCondition() {
     }
     cmp->connectSubtree(LEFT_CHILD, left);
     cmp->connectSubtree(RIGHT_CHILD, getEquation());
+    check_assert(')');
+    tok_ptr++;
     return cmp;
 }
 
@@ -435,7 +451,7 @@ Tree<Node>* LexicalAnalizator::getAbs() {
     Tree<Node>* val = getT();
     while (this_is(SYMBOL, '+') || this_is(SYMBOL, '-')) {
         int code = tok_str[tok_ptr].code;
-        str++;
+        tok_ptr++;
         Tree<Node>* val1 = getT();
         if (code == '+') {
             Tree<Node>* ret_val = new Tree<Node>(Node(Node::SPECIAL_SYMBOLS, ADDITION));
@@ -502,7 +518,7 @@ Tree<Node> *LexicalAnalizator::getP() {
 
 Tree<Node> *LexicalAnalizator::getName() {
     check_assert(tok_str[tok_ptr].type == Token::ID)
-    if (tok_str[tok_ptr + 1].type == Token::SYMBOL) {
+    if (tok_str[tok_ptr + 1].type == Token::SYMBOL && tok_str[tok_ptr + 1].code == '(') {
         return getCall();
     } else {
         Tree<Node>* name = new Tree<Node> (Node(Node::VARIABLE_TYPE, tok_str[tok_ptr++].code));
@@ -512,7 +528,7 @@ Tree<Node> *LexicalAnalizator::getName() {
 
 Tree<Node> *LexicalAnalizator::getCall() {
     check_assert(tok_str[tok_ptr].type == Token::ID)
-    Tree<Node>* function = new Tree<Node> (Node(Node::OPERATION_TYPE, tok_str[tok_ptr].code));
+    Tree<Node>* function = new Tree<Node> (Node(Node::OPERATION_TYPE, tok_str[tok_ptr++].code));
     function->connectSubtree(LEFT_CHILD, getArgEnum());
     return function;
 }
@@ -520,17 +536,48 @@ Tree<Node> *LexicalAnalizator::getCall() {
 Tree<Node> *LexicalAnalizator::getArgEnum() {
     check_assert(this_is(SYMBOL, '('))
     tok_ptr++;
-    Tree<Node>* arg = new Tree<Node>(Node(Node::SPECIAL_SYMBOLS, COMA_PARAMETER));
-    arg->connectSubtree(RIGHT_CHILD, getEquation());
-    Tree<Node>* nextArg = arg;
-    while (this_is(SYMBOL, ',')) {
-        tok_ptr++;
-        nextArg = nextArg->growChild(LEFT_CHILD, Node(Node::SPECIAL_SYMBOLS, COMA_PARAMETER));
-        nextArg->connectSubtree(RIGHT_CHILD, getEquation());
+    Tree<Node>* arg = nullptr;
+    if (!this_is(SYMBOL, ')')) {
+        arg = new Tree<Node>(Node(Node::SPECIAL_SYMBOLS, COMA_PARAMETER));
+        arg->connectSubtree(RIGHT_CHILD, getEquation());
+        Tree<Node> *nextArg = arg;
+        while (this_is(SYMBOL, ',')) {
+            tok_ptr++;
+            nextArg = nextArg->growChild(LEFT_CHILD, Node(Node::SPECIAL_SYMBOLS, COMA_PARAMETER));
+            nextArg->connectSubtree(RIGHT_CHILD, getEquation());
+        }
     }
-    check_assert(this_is(SYMBOL, '('))
+    check_assert(this_is(SYMBOL, ')'))
     tok_ptr++;
     return arg;
+}
+
+void LexicalAnalizator::error_msg(int line) {
+    fprintf(stderr, "Syntaxis error on Line %d\n Got ", LINE_CNT);
+    printToken(stderr, tok_ptr);
+    exit(line);
+}
+
+void LexicalAnalizator::printToken(FILE * file, int index) {
+    fprintf(file, "[%d] TYPE = ", index);
+    switch (tok_str[index].type) {
+        case Token::NUMBER:
+            fprintf(file, "number; value = %lg", tok_str[index].num);
+            break;
+        case Token::ID:
+            fprintf(file, "id; value = %s[%d]", ID_VECTOR[tok_str[index].code], tok_str[index].code);
+            break;
+        case Token::SYMBOL:
+            if (tok_str[index].code =='\n')
+                fprintf(file, "symbol; value = \\n");
+            else
+                fprintf(file, "symbol; value = %c", tok_str[index].code);
+            break;
+        case Token::CMD:
+            fprintf(file, "command; %s", Language_CMD[tok_str[index].code]);
+            break;
+    }
+    fprintf(file, "\n");
 }
 
 
