@@ -66,9 +66,9 @@ void functionGenerator(FILE *file, Tree<Node> *node) {
 void makeDefinition(FILE *file, Tree<Node> *node) {
 
     if (strcmp(FUNCTIONS[node->getValue().code].ID, "$main") == 0) {
-        
+
         fprintf(file, "%s\n%s\n", LMAIN, LBEGIN);
-        
+
     } else {
 
         fprintf(file, "%s %s (", LFUNC_DEF, FUNCTIONS[node->getValue().code].ID + 1);
@@ -87,7 +87,7 @@ void makeDefinition(FILE *file, Tree<Node> *node) {
 
         fprintf(file, ")\n%s\n", LBEGIN);
     }
-    
+
     generateCode(file, node->getChild(RIGHT_CHILD));
 
     fprintf(file, "%s\n", LEND);
@@ -145,9 +145,11 @@ void stdGenerator(FILE *file, Tree<Node> *node) {
             break;
 
         case IF_ELSE:
-            generateCode(file, node->getChild(RIGHT_CHILD));
-            fprintf(file, "%s\n%s\n%s", LEND, LELSE, LBEGIN);
-            generateCode(file, node->getChild(RIGHT_CHILD));
+            generateCode(file, node->getChild(LEFT_CHILD));
+            if (!node->childIsEmpty(RIGHT_CHILD)) {
+                fprintf(file, "%s\n%s\n%s\n", LEND, LELSE, LBEGIN);
+                generateCode(file, node->getChild(RIGHT_CHILD));
+            }
             break;
 
         case WHILE:
