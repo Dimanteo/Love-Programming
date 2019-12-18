@@ -222,6 +222,7 @@ Tree<Node>* LexicalAnalizator::getExp() {
     }
     check_assert(this_is_cmd(LMAIN))
     start->connectSubtree(LEFT_CHILD, getMain());
+    tok_ptr++;
     while (this_is(SYMBOL, '\n'))
         tok_ptr++;
     while (this_is_cmd(LFUNC_DEF)) {
