@@ -1,8 +1,8 @@
 #ifndef PROGRAMMING_LANGUAGE_CODEGENERATOR_H
 #define PROGRAMMING_LANGUAGE_CODEGENERATOR_H
 
-#include <mem.h>
-#include <vector>
+//#include <mem.h>
+//#include <vector>
 #include "My_Headers/txt_files.h"
 #include "Tree_t/Tree.cpp"
 #include "Node.h"

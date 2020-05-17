@@ -43,10 +43,17 @@ void makeTransDump(const char textDump[], const char pngDump[], Tree<Node>* AST)
 
 
 
-int main() {
-    Tree<Node>* AST = parseLangToAST("../Maksim.txt");
+int main(int argc, char* argv[]) {
 
-    makeASTfile("../Maksim.love", AST);
+    if (argc < 2)
+    {
+        printf("Введите имя файла для компиляции.\n");
+        return 1;
+    }
+
+    Tree<Node>* AST = parseLangToAST(argv[1]);
+
+    makeASTfile("Maksim.love", AST);
 
     return 0;
 }

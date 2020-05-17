@@ -2,11 +2,11 @@
 
 int main() {
 
-    Tree<Node>* tree = makeAST("../Maksim.love");
+    Tree<Node>* tree = makeAST("Maksim.love");
 
     makeDump("Tree.log", "AST_backend_IN.png", tree);
 
-    makeAssembler("E:/C_Progs/Processor Laba/asm_stdin.txt", tree);
+    makeAssembler("/home/dimanteo/Home/C_progs/My_CPU/asm_stdin.txt", tree);
 
     makeDump("Tree.log", "AST_backend_OUT.png", tree);
 

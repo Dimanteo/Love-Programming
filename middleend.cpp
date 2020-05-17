@@ -5,7 +5,7 @@ void printASTnode(FILE* file, Tree<Node>* node);
 void makeASTfile(const char fileName[], Tree<Node> *tree);
 
 int main() {
-    Tree<Node>* tree = makeAST("../Maksim.love");
+    Tree<Node>* tree = makeAST("Maksim.love");
 
     Differentiator optimizer(0);
 
@@ -15,7 +15,7 @@ int main() {
 
     makeDump("Tree.log", "AST_middle_OUT.png", tree);
 
-    makeASTfile("../Maksim.love", tree);
+    makeASTfile("Maksim.love", tree);
 
     delete(tree);
 }

@@ -1,8 +1,8 @@
 #ifndef PROGRAMMING_LANGUAGE_PARSER_H
 #define PROGRAMMING_LANGUAGE_PARSER_H
 
-#include <cctype>
-#include <mem.h>
+#include <ctype.h>
+#include <wctype.h>
 #include "Tree_t/Tree.cpp"
 #include "Node.h"
 #include "Commons.h"
@@ -140,10 +140,13 @@ void LexicalAnalizator::tokenize() {
             continue;
         }
 
-        if (isalpha(*str) || iswalpha(*(wchar_t*)str)) {
+        //if (isalpha(*str) || iswalpha(*(wchar_t*)str)) {
             getStr();
             continue;
-        }
+        //}
+
+        fprintf(stderr, "ERROR: can't translate %c\n", *str);
+        exit(1);
     }
 }
 

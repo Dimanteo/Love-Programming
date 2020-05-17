@@ -14,10 +14,16 @@ void makeDefinition(FILE* file, Tree<Node>* node);
 
 void makeCall(FILE* file, Tree<Node>* node);
 
-int main() {
-    Tree<Node>* tree = makeAST("../Maksim.love");
+int main(int argc, char* argv[]) {
+    if (argc < 2)
+    {
+        printf("Введите имя выходного файла.\n");
+        return 1;
+    }
 
-    makeLanguageFile("../RoboMaksim.txt", tree);
+    Tree<Node>* tree = makeAST("Maksim.love");
+
+    makeLanguageFile(argv[1], tree);
 
     delete(tree);
 }
