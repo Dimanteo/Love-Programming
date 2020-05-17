@@ -1,13 +1,13 @@
 #ifndef PROGRAMMING_LANGUAGE_CODEGENERATOR_H
 #define PROGRAMMING_LANGUAGE_CODEGENERATOR_H
 
-//#include <mem.h>
-//#include <vector>
+
 #include "My_Headers/txt_files.h"
 #include "Tree_t/Tree.cpp"
 #include "Node.h"
 #include "Commons.h"
 #include "Derivative.h"
+#include "Maksim.h"
 
 #define VERIFY_CONTEXT __FILE__, __PRETTY_FUNCTION__, __LINE__
 
@@ -87,6 +87,174 @@ Tree<Node> * makeAST(const char input[]);
 
 
 ///////////////////////DEFINITIONS///////////////////////////
+
+//TODO standart dump
+/*template <>
+void Tree<Node>::genDot(Tree<Node> *node, FILE *file) {
+    assert(file);
+    assert(node);
+
+    switch (node->getValue().type) {
+
+        case Node::NUMBER_TYPE:
+            fprintf(file, "\"%p\" [label=\"%g\","
+                         "color=darkseagreen2,"
+                         "style=filled,"
+                         "shape=egg,"
+                         "fontname=bold,"
+                         "fontsize=20]\n", node, node->getValue().num);
+            break;
+
+        case Node::VARIABLE_TYPE:
+            fprintf(file, "\"%p\" [label=\"%s\","
+                          "color=darkolivegreen1,"
+                          "shape=egg,"
+                          "style=filled,"
+                         "fontsize=20]\n", node, VARIABLES[node->getValue().code].ID);
+            break;
+
+        case Node::SPECIAL_SYMBOLS : {
+
+            char shape[20] = "diamond";
+            char color[20] = "gold";
+            char style[20] = "filled";
+
+            char shape1[20] = "pentagon";
+            char color1[20] = "bisque";
+            char style1[20] = "filled";
+            switch (node->getValue().code) {
+
+                case ADDITION:
+                    strcpy(color, "gold");
+                    fprintf(file, "\"%p\" [label=\"%c\","
+                                  "color=%s,"
+                                  "shape=%s,"
+                                  "style=%s,"
+                                  "fixedsize=true"
+                                  "fontname=bold"
+                                  "fontsize=15]\n" , node, node->getValue().code, color, shape, style);
+                    break;
+
+                case MINUS:
+                    strcpy(color, "orchid2");
+                    fprintf(file, "\"%p\" [label=\"%c\","
+                                  "color=%s,"
+                                  "shape=%s,"
+                                  "style=%s,"
+                                  "fixedsize=true"
+                                  "fontname=bold"
+                                  "fontsize=15]\n" , node, node->getValue().code, color, shape, style);
+                    break;
+
+                case MULTIPLY:
+                    strcpy(color, "pink");
+                    fprintf(file, "\"%p\" [label=\"%c\","
+                                  "color=%s,"
+                                  "shape=%s,"
+                                  "style=%s,"
+                                  "fixedsize=true"
+                                  "fontname=bold"
+                                  "fontsize=15]\n" , node, node->getValue().code, color, shape, style);
+                    break;
+
+                case DIVIDE:
+                    strcpy(color, "peachpuff");
+                    fprintf(file, "\"%p\" [label=\"%c\","
+                                  "color=%s,"
+                                  "shape=%s,"
+                                  "style=%s,"
+                                  "fixedsize=true"
+                                  "fontname=bold"
+                                  "fontsize=15]\n" , node, node->getValue().code, color, shape, style);
+                    break;
+
+                case POWER:
+                    strcpy(color, "ivory");
+                    fprintf(file, "\"%p\" [label=\"%c\","
+                                  "color=%s,"
+                                  "shape=%s,"
+                                  "style=%s,"
+                                  "fixedsize=true"
+                                  "fontname=bold"
+                                  "fontsize=15]\n" , node, node->getValue().code, color, shape, style);
+                    break;
+
+                case DERIV:
+                    strcpy(color, "gray78");
+                    fprintf(file, "\"%p\" [label=\"%s\","
+                                  "color=%s,"
+                                  "shape=%s,"
+                                  "style=%s,"
+                                  "fixedsize=true"
+                                  "fontname=bold"
+                                  "fontsize=15]\n" , node, Language_CMD[node->getValue().code], color, shape, style);
+                    break;
+
+                case WHILE:
+                    strcpy(shape1, "pentagon");
+                    fprintf(file, "\"%p\" [label=\"%s\","
+                                  "color=%s,"
+                                  "shape=%s,"
+                                  "style=%s,"
+                                  "fontname=bold]\n", node, Language_CMD[node->getValue().code], color1, shape1, style1);
+                    break;
+
+                case IF:
+                    strcpy(shape1, "hexagon");
+                    fprintf(file, "\"%p\" [label=\"%s\","
+                                  "color=%s,"
+                                  "shape=%s,"
+                                  "style=%s,"
+                                  "fontname=bold]\n", node, Language_CMD[node->getValue().code], color1, shape1, style1);
+                    break;
+
+                case IF_ELSE:
+                    strcpy(shape1, "hexagon");
+                    fprintf(file, "\"%p\" [label=\"%s\","
+                                  "color=%s,"
+                                  "shape=%s,"
+                                  "style=%s,"
+                                  "fontname=bold]\n", node, Language_CMD[node->getValue().code], color1, shape1, style1);
+                    break;
+
+                case RET:
+                    strcpy(shape1, "septagon");
+                    fprintf(file, "\"%p\" [label=\"%s\","
+                                  "color=%s,"
+                                  "shape=%s,"
+                                  "style=%s,"
+                                  "fontname=bold]\n", node, Language_CMD[node->getValue().code], color1, shape1, style1);
+                    break;
+
+                case ASSIGN: {
+                    char shape[20] = "circle";
+                    strcpy(shape, "larrow");
+                    fprintf(file, "\"%p\" [label=\"%c\","
+                                  "color=black,"
+                                  "style=bold,"
+                                  "shape=%s,"
+                                  "fontname=bold]\n", node, node->getValue().code, shape);
+                    break;
+                }
+
+                default:
+                    strcpy(shape, "parallelogram");
+                    strcpy(color, "gray56");
+            }
+
+        }
+            break;
+
+        case Node::OPERATION_TYPE: {
+            fprintf(file, "\"%p\" [label=\"%s\","
+                          "color=bisque,"
+                          "shape=box,"
+                          "style=filled,"     \
+                         "fontname=bold]\n", node, FUNCTIONS[node->getValue().code].ID);
+        }
+            break;
+    }
+}*/
 
 
 void makeAssembler(const char *filename, Tree<Node> *tree) {
@@ -325,7 +493,6 @@ void specialSymbolHandler(FILE *assembler, Tree<Node> *node) {
             node->connectSubtree(RIGHT_CHILD, result);
 
             translate(assembler, node->getChild(RIGHT_CHILD));
-            fprintf(assembler, "\tout\n");
 
             break;
         }

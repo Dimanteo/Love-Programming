@@ -1,8 +1,7 @@
 #ifndef PROGRAMMING_LANGUAGE_PARSER_H
 #define PROGRAMMING_LANGUAGE_PARSER_H
 
-#include <ctype.h>
-#include <wctype.h>
+#include <cctype>
 #include "Tree_t/Tree.cpp"
 #include "Node.h"
 #include "Commons.h"
@@ -144,9 +143,6 @@ void LexicalAnalizator::tokenize() {
             getStr();
             continue;
         //}
-
-        fprintf(stderr, "ERROR: can't translate %c\n", *str);
-        exit(1);
     }
 }
 
@@ -354,9 +350,10 @@ Tree<Node> *LexicalAnalizator::getGet() {
     check_assert(this_is_cmd(LGET))
     tok_ptr++;
     Tree<Node>* get = new Tree<Node> (Node(Node::SPECIAL_SYMBOLS, GET));
-    check_assert(tok_str[tok_ptr].type == Token::ID)
+    /*check_assert(tok_str[tok_ptr].type == Token::ID)
     get->growChild(LEFT_CHILD, Node(Node::VARIABLE_TYPE, tok_str[tok_ptr].code));
-    tok_ptr++;
+    tok_ptr++;*/
+    get->connectSubtree(LEFT_CHILD, getEquation());
     return get;
 }
 
@@ -366,10 +363,11 @@ Tree<Node> *LexicalAnalizator::getPut(){
     }
     tok_ptr++;
     Tree<Node>* put = new Tree<Node> (Node(Node::SPECIAL_SYMBOLS, PUT));
-    if (tok_str[tok_ptr].type != Token::ID) {
+    /*if (tok_str[tok_ptr].type != Token::ID) {
         syntax_assert
     }
-    put->growChild(LEFT_CHILD, Node(Node::VARIABLE_TYPE, tok_str[tok_ptr++].code));
+    put->growChild(LEFT_CHILD, Node(Node::VARIABLE_TYPE, tok_str[tok_ptr++].code));*/
+    put->connectSubtree(LEFT_CHILD, getEquation());
     return put;
 }
 
@@ -533,6 +531,8 @@ Tree<Node> *LexicalAnalizator::getP() {
         return val;
     } else if (tok_str[tok_ptr].type == Token::NUMBER) {
         return new Tree<Node>(Node(tok_str[tok_ptr++].num));
+    } else if (this_is_cmd(LDIFFER)) {
+        return getDeriv();
     } else {
         return getName();
     }
