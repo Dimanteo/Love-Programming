@@ -575,7 +575,7 @@ Tree<Node> *LexicalAnalizator::getArgEnum() {
 }
 
 void LexicalAnalizator::error_msg(int line) {
-    fprintf(stderr, "Syntaxis error on Line %d\n Got ", LINE_CNT);
+    fprintf(stderr, "Syntaxis error on Line %d. Exit code (%d)\n Got ", LINE_CNT, line);
     printToken(stderr, tok_ptr);
     exit(line);
 }
