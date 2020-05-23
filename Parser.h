@@ -396,6 +396,8 @@ Tree<Node> *LexicalAnalizator::getWhile() {
     tok_ptr++;
     Tree<Node>* cycle = new Tree<Node> (Node(Node::SPECIAL_SYMBOLS, WHILE));
     cycle->connectSubtree(LEFT_CHILD, getCondition());
+    linebr
+    tok_ptr++;
     cycle->connectSubtree(RIGHT_CHILD, getBody());
     return cycle;
 }
