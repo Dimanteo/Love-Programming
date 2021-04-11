@@ -6,7 +6,7 @@ int main() {
 
     makeDump("Tree.log", "AST_backend_IN.png", tree);
 
-    makeAssembler("/home/dimanteo/Home/C_progs/My_CPU/asm_stdin.txt", tree);
+    makeAssembler("asm.txt", tree);
 
     makeDump("Tree.log", "AST_backend_OUT.png", tree);
 
